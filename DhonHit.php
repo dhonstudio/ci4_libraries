@@ -110,11 +110,11 @@ class DhonHit
             helper('text');
             helper('cookie');
 
-            $session_value  = random_string('alnum', 32);
+            $session_value  = random_string('alnum', 32) . $ip_address;
             $session_cookie = (new Cookie($this->session_name))
                 ->withValue($session_value)
                 ->withPrefix($session_prefix)
-                ->withExpires(new DateTime('+2 hours'))
+                ->withExpires(new DateTime('+104 weeks'))
                 ->withPath('/')
                 ->withDomain('')
                 ->withSecure($session_secure)
