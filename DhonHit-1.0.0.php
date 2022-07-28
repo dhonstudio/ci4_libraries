@@ -11,46 +11,64 @@ class DhonHit
 {
     /**
      * Cookie session name.
+     * 
+     * @var string
      */
     public $session_name = 'DShC13v';
 
     /**
      * Cookie session prefix.
+     * 
+     * @var string
      */
     public $session_prefix = '__m-';
 
     /**
      * Cookie session expire.
+     * 
+     * @var string
      */
     public $session_expire = '+104 weeks';
 
     /**
      * Dhon Studio library for connect API.
+     * 
+     * @var DhonRequest
      */
     public $dhonrequest;
 
     /**
      * Id address.
+     * 
+     * @var int
      */
     protected $id_address;
 
     /**
      * Id entity.
+     * 
+     * @var int
      */
     protected $id_entity;
 
     /**
      * Id session.
+     * 
+     * @var int
      */
     protected $id_session;
 
     /**
      * Id source.
+     * 
+     * @var int
      */
     protected $id_source;
 
     /**
      * Id page.
+     * 
+     * @var int
      */
     protected $id_page;
 
