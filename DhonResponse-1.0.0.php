@@ -85,6 +85,13 @@ class DhonResponse
     public $cache_crud = 0;
 
     /**
+     * Cache endpoint effected.
+     *
+     * @var string[]
+     */
+    public $effected
+
+    /**
      * Enabler sqllite.
      *
      * @var boolean
