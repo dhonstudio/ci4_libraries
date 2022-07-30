@@ -38,6 +38,13 @@ class DhonResponse
     public $session_name   = 'DSaL13v';
 
     /**
+     * Cookie session expire.
+     * 
+     * @var string
+     */
+    public $session_expire = '+104 weeks';
+
+    /**
      * Dhon Studio library for connect API.
      * 
      * @var DhonRequest
@@ -78,6 +85,13 @@ class DhonResponse
     public $cache_crud = 0;
 
     /**
+     * Enabler sqllite.
+     *
+     * @var boolean
+     */
+    public $sqllite_on;
+
+    /**
      * Request method.
      * 
      * @var string
@@ -102,13 +116,6 @@ class DhonResponse
      * @var mixed
      */
     public $data;
-
-    /**
-     * Column name for id.
-     * 
-     * @var string
-     */
-    public $id;
 
     /**
      * Username to verify password.
@@ -166,6 +173,11 @@ class DhonResponse
     protected $result;
 
     /**
+     * SQLLite value.
+     */
+    protected $sqllite_value;
+
+    /**
      * Api_users model.
      */
     protected $apiusersModel;
@@ -201,6 +213,10 @@ class DhonResponse
         $this->response->setHeader('Content-type', 'application/json');
         $this->response->setHeader('Access-Control-Allow-Origin', $this->cors);
         $this->response->setStatusCode(Response::HTTP_OK);
+
+        $this->request = service('request');
+
+        helper('filesystem');
     }
 
     /**
@@ -210,15 +226,25 @@ class DhonResponse
     {
         if ($this->basic_auth) $this->_basic_auth();
 
-        if (!$this->cache_value) {
-            $this->request  = service('request');
+        if ($this->sqllite_on) {
+            $this->_sqllite_gen();
+        }
 
+        if (!$this->cache_value) {
             if ($this->api_user['level'] > 0) {
                 if ($this->method == 'GET') {
                     $value = $this->request->getGet($this->column);
 
                     if ($value) {
-                        $result = $this->model->where($this->column, $value)->first();
+                        if ($this->sqllite_value) {
+                            $pre_result = [];
+                            foreach (json_decode($this->sqllite_value, TRUE) as $key => $column) {
+                                if ($column[$this->column] == $value) array_push($pre_result, $column);
+                            }
+
+                            if ($pre_result) $result = $pre_result[0];
+                            else $result = [];
+                        } else $result = $this->model->where($this->column, $value)->first();
 
                         $this->data = $result == [] ? "Array()" : $result;
                     } else {
@@ -229,7 +255,14 @@ class DhonResponse
                     $value = $this->request->getGet($this->column);
 
                     if ($value) {
-                        $result = $this->model->where($this->column, $value)->findAll();
+                        if ($this->sqllite_value) {
+                            $pre_result = [];
+                            foreach (json_decode($this->sqllite_value, TRUE) as $key => $column) {
+                                if ($column[$this->column] == $value) array_push($pre_result, $column);
+                            }
+
+                            $result = $pre_result;
+                        } else $result = $this->model->where($this->column, $value)->findAll();
 
                         $this->total = count($result) == 0 ? [0] : count($result);
                         $this->data = $result == [] ? "Array()" : $result;
@@ -239,7 +272,6 @@ class DhonResponse
                     }
                 } else if ($this->method == 'POST') {
                     if ($this->api_user['level'] > 1) {
-
                         $data = [];
                         foreach ($this->model->allowedFields as $field) {
                             if ($field == 'password_hash') {
@@ -253,9 +285,13 @@ class DhonResponse
                             }
                         }
 
-                        if (!$this->model->where($this->model->preventDuplicate, $this->request->getPost($this->model->preventDuplicate))->first()) {
+                        if (!$this->model->preventDuplicate || !$this->model->where($this->model->preventDuplicate, $this->request->getPost($this->model->preventDuplicate))->first()) {
                             $insert_id  = $this->model->insert($data);
                             if ($insert_id) {
+                                if ($this->sqllite_on) {
+                                    $this->_sqllite_gen();
+                                }
+
                                 $this->data = $this->model->where($this->model->primaryKey, $insert_id)->first();
                             } else {
                                 $this->response->setStatusCode(Response::HTTP_BAD_REQUEST);
@@ -277,14 +313,17 @@ class DhonResponse
                         }
 
                         $edit_id    = $this->request->getPost($this->model->primaryKey);
-                        $this->model->update($edit_id, $data);
                         $result     = $this->model->where($this->model->primaryKey, $edit_id)->first();
 
                         if ($result) {
+                            $this->model->update($edit_id, $data);
+                            if ($this->sqllite_on) {
+                                $this->_sqllite_gen();
+                            }
                             $this->data = $result;
                         } else {
                             $this->response->setStatusCode(Response::HTTP_BAD_REQUEST);
-                            $this->message = 'Require some filed to post';
+                            $this->message = 'Id not found';
                         }
                     } else {
                         $this->response->setStatusCode(Response::HTTP_METHOD_NOT_ALLOWED);
@@ -292,10 +331,14 @@ class DhonResponse
                     }
                 } else if ($this->method == 'DELETE') {
                     if ($this->api_user['level'] > 3) {
-                        $result = $this->model->where($this->model->primaryKey, $this->request->getGet('id'))->first();
+                        $id = $this->request->getGet($this->model->primaryKey) ? $this->request->getGet($this->model->primaryKey) : $this->request->getGet('id');
+                        $result = $this->model->where($this->model->primaryKey, $id)->first();
 
                         if ($result) {
-                            $this->model->delete($this->request->getGet('id'));
+                            $this->model->delete($id);
+                            if ($this->sqllite_on) {
+                                $this->_sqllite_gen();
+                            }
 
                             $db = \Config\Database::connect($this->model->DBGroup);
                             $db->query("ALTER TABLE {$this->model->table} AUTO_INCREMENT = 1");
@@ -358,8 +401,6 @@ class DhonResponse
 
     /**
      * Send final response.
-     *
-     * @return void
      */
     private function _send()
     {
@@ -371,8 +412,6 @@ class DhonResponse
 
     /**
      * Send final response (public).
-     *
-     * @return void
      */
     public function send()
     {
@@ -384,18 +423,21 @@ class DhonResponse
                 : ($this->data === "Array()" ? [] : $this->data)))
             : false;
 
-        $for_cache = json_encode($this->result, JSON_NUMERIC_CHECK);
+        $finalResult = json_encode($this->result, JSON_NUMERIC_CHECK);
 
-        if ($this->cache_on) {
-            if ($this->cache_value && $this->result['status'] == 200) {
-                $for_cache = $this->cache_value;
-            } else {
-                if ($this->cache_crud == 0 && $this->result['status'] == 200)
-                    $this->cache->save($this->cache_name, $for_cache, 24 * 60 * 60);
+        if ($this->cache_on && $this->result['status'] == 200) {
+            if ($this->cache_value) $finalResult = $this->cache_value;
+            else {
+                if ($this->cache_crud == 0 && $this->method != 'POST' && $this->method != 'PUT' && $this->method != 'DELETE')
+                    $this->cache->save($this->cache_name, $finalResult, 24 * 60 * 60);
+
+                if ($this->method == 'POST' || $this->method == 'PUT' || $this->method == 'DELETE') {
+                    $this->crud_effect($this->effected);
+                }
             }
         }
 
-        $this->response->setBody($for_cache);
+        $this->response->setBody($finalResult);
 
         if (isset($_SERVER['HTTP_USER_AGENT'])) $this->_hit();
 
@@ -404,9 +446,36 @@ class DhonResponse
     }
 
     /**
-     * Get Hit for API requester.
-     *
-     * @return void
+     * Delete cache because CRUD action.
+     */
+    public function crud_effect(array $effected)
+    {
+        foreach ($effected as $key => $value) {
+            $this->cache->deleteMatching(urlencode($value) . '*');
+        }
+    }
+
+    /**
+     * Create and Update SQLLite.
+     */
+    private function _sqllite_gen()
+    {
+        $folder_location    = ROOTPATH . "writable/lite/";
+        $file               = $folder_location . $this->model->table . '.json';
+
+        if (!is_dir($folder_location)) {
+            mkdir($folder_location, 0777, true);
+        }
+        if (!file_exists($file) || $this->method == 'POST' || $this->method == 'PUT' || $this->method == 'DELETE') {
+            $this->sqllite_value = json_encode($this->model->findAll(), JSON_NUMERIC_CHECK);
+            write_file($file, $this->sqllite_value);
+        } else {
+            $this->sqllite_value = file_get_contents($file);
+        }
+    }
+
+    /**
+     * Identify API requester.
      */
     private function _hit()
     {
@@ -467,7 +536,7 @@ class DhonResponse
             $session_cookie = (new Cookie($this->session_name))
                 ->withValue($session_value)
                 ->withPrefix($session_prefix)
-                ->withExpires(new DateTime('+2 hours'))
+                ->withExpires(new DateTime($this->session_expire))
                 ->withPath('/')
                 ->withDomain('')
                 ->withSecure($session_secure)
