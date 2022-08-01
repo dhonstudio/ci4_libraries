@@ -125,6 +125,13 @@ class DhonResponse
     public $data;
 
     /**
+     * Sort enabler.
+     * 
+     * @var mixed
+     */
+    public $sort;
+
+    /**
      * Username to verify password.
      * 
      * @var string
@@ -372,7 +379,11 @@ class DhonResponse
                         $this->message = 'Username not found';
                     }
                 } else {
-                    $result         = $this->model->findAll();
+                    $result = $this->sqllite_value ? json_decode($this->sqllite_value, TRUE) : $this->model->findAll();
+
+                    if ($this->sort) {
+                        $result = $this->_sort($result);
+                    }
 
                     $this->total    = count($result) == 0 ? [0] : count($result);
                     $this->data     = $result == [] ? "Array()" : $result;
@@ -479,6 +490,28 @@ class DhonResponse
         } else {
             $this->sqllite_value = file_get_contents($file);
         }
+    }
+
+    /**
+     * Sort the result.
+     */
+    private function _sort($result)
+    {
+        $this->sort_by  = $this->request->getGet('sort_by');
+        $sort_method    = $this->request->getGet('sort_method');
+        if ($this->sort_by) {
+            if ($sort_method && $sort_method == "DESC") {
+                usort($result, function ($x, $y) {
+                    return $y[$this->sort_by] <=> $x[$this->sort_by];
+                });
+            } else {
+                usort($result, function ($x, $y) {
+                    return $x[$this->sort_by] <=> $y[$this->sort_by];
+                });
+            }
+        }
+
+        return $result;
     }
 
     /**
