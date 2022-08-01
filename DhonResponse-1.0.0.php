@@ -278,6 +278,10 @@ class DhonResponse
                             $result = $pre_result;
                         } else $result = $this->model->where($this->column, $value)->findAll();
 
+                        if ($this->sort) {
+                            $result = $this->_sort($result);
+                        }
+
                         $this->total = count($result) == 0 ? [0] : count($result);
                         $this->data = $result == [] ? "Array()" : $result;
                     } else {
