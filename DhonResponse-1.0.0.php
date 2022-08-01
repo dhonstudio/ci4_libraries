@@ -89,7 +89,7 @@ class DhonResponse
      *
      * @var string[]
      */
-    public $effected
+    public $effected;
 
     /**
      * Enabler sqllite.
