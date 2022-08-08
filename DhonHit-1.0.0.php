@@ -38,52 +38,9 @@ class DhonHit
     public $dhonrequest;
 
     /**
-     * Id address.
-     * 
-     * @var int
-     */
-    protected $id_address;
-
-    /**
-     * Id entity.
-     * 
-     * @var int
-     */
-    protected $id_entity;
-
-    /**
-     * Id session.
-     * 
-     * @var int
-     */
-    protected $id_session;
-
-    /**
-     * Id source.
-     * 
-     * @var int
-     */
-    protected $id_source;
-
-    /**
-     * Id page.
-     * 
-     * @var int
-     */
-    protected $id_page;
-
-    /**
      * Collect data from user info.
      */
     public function collect()
-    {
-        $this->_getHit();
-    }
-
-    /**
-     * Get Hit.
-     */
-    private function _getHit()
     {
         //~ ip_address
         $ip_address =
@@ -150,7 +107,7 @@ class DhonHit
         } else {
             $get = '';
         }
-        $page_value     = uri_string() ? uri_string() . $get : '/';
+        $page_value = uri_string() ? uri_string() . $get : '/';
 
         //~ hit
         $this->dhonrequest->post('gethit', [

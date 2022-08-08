@@ -293,17 +293,17 @@ class DhonResponse
                         $data = [];
                         foreach ($this->model->allowedFields as $field) {
                             if ($field == 'password_hash') {
-                                if ($this->request->getPost($field)) {
-                                    $data[$field] = password_hash($this->request->getPost($field), PASSWORD_DEFAULT);
+                                if ($_POST[$field]) {
+                                    $data[$field] = password_hash($_POST[$field], PASSWORD_DEFAULT);
                                 } else {
-                                    $data[$field] = $this->request->getPost($field);
+                                    $data[$field] = $_POST[$field];
                                 }
                             } else {
-                                $data[$field] = $this->request->getPost($field);
+                                $data[$field] = $_POST[$field];
                             }
                         }
 
-                        if (!$this->model->preventDuplicate || !$this->model->where($this->model->preventDuplicate, $this->request->getPost($this->model->preventDuplicate))->first()) {
+                        if (!$this->model->preventDuplicate || !$this->model->where($this->model->preventDuplicate, $_POST[$this->model->preventDuplicate])->first()) {
                             $insert_id  = $this->model->insert($data);
                             if ($insert_id) {
                                 if ($this->sqllite_on) {
