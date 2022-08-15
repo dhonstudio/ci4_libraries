@@ -146,6 +146,11 @@ class DhonResponse
     public $password;
 
     /**
+     * SQLLite value.
+     */
+    public $sqllite_value;
+
+    /**
      * Response service.
      */
     protected $response;
@@ -185,11 +190,6 @@ class DhonResponse
      * @var mixed
      */
     protected $result;
-
-    /**
-     * SQLLite value.
-     */
-    protected $sqllite_value;
 
     /**
      * Api_users model.
@@ -236,18 +236,18 @@ class DhonResponse
     /**
      * Collect data from db.
      */
-    public function collect()
+    public function collect(bool $send = true)
     {
         if ($this->basic_auth) $this->_basic_auth();
 
         if ($this->sqllite_on) {
-            $this->_sqllite_gen();
+            $this->sqllite_gen();
         }
 
         if (!$this->cache_value) {
             if ($this->api_user['level'] > 0) {
                 if ($this->method == 'GET') {
-                    $value = $this->request->getGet($this->column);
+                    $value = $_GET[$this->column];
 
                     if ($value) {
                         if ($this->sqllite_value) {
@@ -266,7 +266,7 @@ class DhonResponse
                         $this->message = 'Require some variable to get';
                     }
                 } else if ($this->method == 'GETALL') {
-                    $value = $this->request->getGet($this->column);
+                    $value = $_GET[$this->column];
 
                     if ($value) {
                         if ($this->sqllite_value) {
@@ -307,7 +307,7 @@ class DhonResponse
                             $insert_id  = $this->model->insert($data);
                             if ($insert_id) {
                                 if ($this->sqllite_on) {
-                                    $this->_sqllite_gen();
+                                    $this->sqllite_gen();
                                 }
 
                                 $this->data = $this->model->where($this->model->primaryKey, $insert_id)->first();
@@ -336,7 +336,7 @@ class DhonResponse
                         if ($result) {
                             $this->model->update($edit_id, $data);
                             if ($this->sqllite_on) {
-                                $this->_sqllite_gen();
+                                $this->sqllite_gen();
                             }
                             $this->data = $result;
                         } else {
@@ -355,7 +355,7 @@ class DhonResponse
                         if ($result) {
                             $this->model->delete($id);
                             if ($this->sqllite_on) {
-                                $this->_sqllite_gen();
+                                $this->sqllite_gen();
                             }
 
                             $db = \Config\Database::connect($this->model->DBGroup);
@@ -398,7 +398,7 @@ class DhonResponse
             }
         }
 
-        $this->_send();
+        if ($send) $this->_send();
     }
 
     /**
@@ -480,7 +480,7 @@ class DhonResponse
     /**
      * Create and Update SQLLite.
      */
-    private function _sqllite_gen()
+    public function sqllite_gen()
     {
         $folder_location    = ROOTPATH . "writable/lite/";
         $file               = $folder_location . $this->model->table . '.json';
