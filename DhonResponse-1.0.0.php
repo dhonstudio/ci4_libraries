@@ -295,11 +295,10 @@ class DhonResponse
                             if ($field == 'password_hash') {
                                 if ($_POST[$field]) {
                                     $data[$field] = password_hash($_POST[$field], PASSWORD_DEFAULT);
-                                } else {
-                                    $data[$field] = $_POST[$field];
                                 }
                             } else {
-                                $data[$field] = $_POST[$field];
+                                if (isset($_POST[$field]))
+                                    $data[$field] = $_POST[$field];
                             }
                         }
 
@@ -427,7 +426,6 @@ class DhonResponse
     private function _send()
     {
         $this->message ? $this->result['message'] = $this->message : false;
-        $this->total ? ($this->result['total'] = $this->total == [0] ? 0 : $this->total) : false;
 
         $this->send();
     }
@@ -439,6 +437,8 @@ class DhonResponse
     {
         $this->result['status']   = $this->response->getStatusCode();
         $this->result['response'] = $this->response->getReasonPhrase();
+
+        $this->total ? ($this->result['total'] = $this->total == [0] ? 0 : $this->total) : false;
 
         $this->data ? ($this->result['data'] = $this->data === [false] ? false
             : ($this->data === [true] ? true
@@ -501,8 +501,8 @@ class DhonResponse
      */
     private function _sort($result)
     {
-        $this->sort_by  = $this->request->getGet('sort_by');
-        $sort_method    = $this->request->getGet('sort_method');
+        $this->sort_by  = $_GET['sort_by'];
+        $sort_method    = $_GET['sort_method'];
         if ($this->sort_by) {
             if ($sort_method && $sort_method == "DESC") {
                 usort($result, function ($x, $y) {
