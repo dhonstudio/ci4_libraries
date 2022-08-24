@@ -297,19 +297,20 @@ class DhonResponse
                                     $data[$field] = password_hash($_POST[$field], PASSWORD_DEFAULT);
                                 }
                             } else {
-                                if (isset($_POST[$field]))
-                                    $data[$field] = $_POST[$field];
+                                $data[$field] = $_POST[$field];
                             }
                         }
 
                         if (!$this->model->preventDuplicate || !$this->model->where($this->model->preventDuplicate, $_POST[$this->model->preventDuplicate])->first()) {
                             $insert_id  = $this->model->insert($data);
-                            if ($insert_id) {
+                            $result     = $this->model->where($this->model->primaryKey, $insert_id)->first();
+
+                            if ($result) {
                                 if ($this->sqllite_on) {
                                     $this->sqllite_gen();
                                 }
 
-                                $this->data = $this->model->where($this->model->primaryKey, $insert_id)->first();
+                                $this->data = $result;
                             } else {
                                 $this->response->setStatusCode(Response::HTTP_BAD_REQUEST);
                                 $this->message = 'Require some filed to post';
